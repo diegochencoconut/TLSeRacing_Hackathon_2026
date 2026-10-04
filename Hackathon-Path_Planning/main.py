@@ -11,8 +11,12 @@ def main():
     track = Track(TRACK_PATH)
 
     planner = PathPlanner()
-    path = planner.simple_compute_path(track)
-    plot_track_and_path(track, path)
+    path_simple = planner.simple_compute_path(track)
+    plot_track_and_path(track, path_simple)
+
+    path_delaunay = planner.delaunay_triangulation_path(track)
+    plot_track_and_path(track, path_delaunay)
+
 
 if __name__ == "__main__":
     main()

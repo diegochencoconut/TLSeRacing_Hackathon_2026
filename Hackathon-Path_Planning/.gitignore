@@ -8,3 +8,7 @@ build/
 .venv
 env/
 venv/
+
+uv.lock
+.python-version
+pyproject.toml
