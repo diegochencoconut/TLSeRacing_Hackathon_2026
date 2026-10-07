@@ -2,6 +2,7 @@ from src.track import Track
 import numpy as np
 from scipy.spatial import Delaunay
 from matplotlib import pyplot as plt
+from scipy.interpolate import make_splprep
 
 class PathPlanner:
     def __init__(self, step_size : float = 0.5, smoothing : float = 1.0):
@@ -24,7 +25,8 @@ class PathPlanner:
     def delaunay_triangulation_path(self, track : Track):
 
         start_coo = (track.car_start.x, track.car_start.y)
-        path = [start_coo]
+        # path = [start_coo]
+        path = []
 
         blue_cones = np.array([(cone.x, cone.y) for cone in track.blue_cones])
         yellow_cones = np.array([(cone.x, cone.y) for cone in track.yellow_cones])
@@ -38,7 +40,7 @@ class PathPlanner:
         plt.ylabel("Y Coordinate")
 
         # Triangulate each successive group of five cones from each boundary.
-        BATCH_SIZE = 10
+        BATCH_SIZE = 5
         batch_count = min(len(blue_cones), len(yellow_cones))
         start = 0
         while start < batch_count:
@@ -77,15 +79,35 @@ class PathPlanner:
                             edges.append(tuple(sorted((p1, p2))))
 
             for p1, p2 in sorted(set(edges)):
+                print(p1, p2)
                 midpoint = (points[p1] + points[p2]) / 2
+                print(f"Midpoint: {midpoint}")
+
+                # Remove first path since it will be the same as the last path of last overlap
+                if len(path) != 0 and np.allclose(midpoint, path[-1]):
+                    continue
+                # Check if we already made a circle
+                if len(path) != 0 and np.allclose(midpoint, path[0]):
+                    break
                 path.append(tuple(midpoint))
             
 
-        # Plot the path
-        path = np.array(path)
+        # We now try to smooth the path by spline
+        path.append(path[0])  # Close the loop
+        # print(path)
+        spl, u = make_splprep(np.array(path).T, s=1, bc_type='periodic')
+
+        # Obtain the path points from the spline representation
+        path = spl(u)
+        path = np.array(path).T
+
+        # Add back the starting point
+        path = np.vstack((start_coo, path))
+
         plt.plot(path[:, 0], path[:, 1], color='red', label='Planned Path', linewidth=2)
         plt.scatter(path[:, 0], path[:, 1], color='red', label='Searched Points', s=10)
         plt.legend()
+
 
         # plt.show()
 
