@@ -48,6 +48,8 @@ class PathPlanner:
             yellow_batch = yellow_cones[start:start + BATCH_SIZE]
             # print(f"Processing batch: start={start}, blue_batch={blue_batch}, yellow_batch={yellow_batch}")
 
+            # If the batch is smaller than BATCH_SIZE, 
+            # we can wrap around to the beginning of the cones list to ensure we have enough points for triangulation.
             if len(blue_batch) < BATCH_SIZE:
                 blue_batch = np.vstack((blue_batch, blue_cones[0:BATCH_SIZE - len(blue_batch)]))
 
@@ -83,7 +85,7 @@ class PathPlanner:
                 midpoint = (points[p1] + points[p2]) / 2
                 print(f"Midpoint: {midpoint}")
 
-                # Remove first path since it will be the same as the last path of last overlap
+                # Remove first path since it will be the same as the last path of last window
                 if len(path) != 0 and np.allclose(midpoint, path[-1]):
                     continue
                 # Check if we already made a circle
@@ -94,8 +96,9 @@ class PathPlanner:
 
         # We now try to smooth the path by spline
         path.append(path[0])  # Close the loop
+        original_path = np.array(path)
         # print(path)
-        spl, u = make_splprep(np.array(path).T, s=1, bc_type='periodic')
+        spl, u = make_splprep(np.array(path).T, s=10, bc_type='periodic')
 
         # Obtain the path points from the spline representation
         path = spl(u)
@@ -103,8 +106,10 @@ class PathPlanner:
 
         # Add back the starting point
         path = np.vstack((start_coo, path))
+        print(f"Final path: {path}")
 
         plt.plot(path[:, 0], path[:, 1], color='red', label='Planned Path', linewidth=2)
+        plt.plot(original_path[:, 0], original_path[:, 1], color='green', label='Original Path', linewidth=1, linestyle='--')
         plt.scatter(path[:, 0], path[:, 1], color='red', label='Searched Points', s=10)
         plt.legend()
 
